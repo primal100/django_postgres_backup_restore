@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Django management commands for encrypted PostgreSQL backups and restores"
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = "MIT"
 authors = [{ name = "Primal100" }]
 dependencies = [
     "Django>=4.2",
