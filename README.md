@@ -162,6 +162,7 @@ python -m pip install -e ".[gcs,publish]"
 .\publish.ps1
 ```
 
-The script builds the source and wheel distributions, validates them with Twine,
-and uploads them using Twine's normal configuration. It does not read or print
-the PyPI token itself.
+The script activates the project `.venv` (creating it if needed), upgrades
+`pip`, `setuptools`, `wheel`, `build`, and `twine`, then builds and validates the
+source and wheel distributions before uploading with Twine's normal
+configuration. It does not read or print the PyPI token itself.
