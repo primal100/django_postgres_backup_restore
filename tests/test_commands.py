@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
@@ -7,7 +7,9 @@ from unittest.mock import Mock, patch
 from django.test import SimpleTestCase, override_settings
 from cryptography.fernet import Fernet
 
+from django_postgres_backup_restore.management.commands import _google_drive
 from django_postgres_backup_restore.management.commands import _storage
+from django_postgres_backup_restore.management.commands.list_backups import Command as ListBackupsCommand
 from django_postgres_backup_restore.management.commands.backup import (
     Command as BackupCommand,
     _pg_dump_environment,
@@ -90,6 +92,52 @@ class BackupStorageTests(SimpleTestCase):
         GOOGLE_CLOUD_STORAGE_PREFIX="Backups",
     )
     @patch("django_postgres_backup_restore.management.commands._storage._bucket")
+    def test_lists_gcs_objects_with_inclusive_date_bounds(self, get_bucket):
+        bucket = Mock()
+        bucket.list_blobs.return_value = []
+        get_bucket.return_value = bucket
+
+        _storage.list_backup_files(start_date=date(2026, 5, 1), end_date=date(2026, 5, 31))
+
+        bucket.list_blobs.assert_called_once_with(
+            prefix="Backups/",
+            start_offset="Backups/db_backup_20260501",
+            end_offset="Backups/db_backup_20260601",
+        )
+
+    @override_settings(BACKUP_STORAGE_BACKEND="google_drive", GOOGLE_BACKUPS_DIR="drive-folder")
+    @patch("django_postgres_backup_restore.management.commands._google_drive.google_authenticate")
+    def test_drive_listing_queries_only_backup_filename_prefix(self, authenticate):
+        service = Mock()
+        authenticate.return_value = service
+        service.files.return_value.list.return_value.execute.return_value = {"files": []}
+
+        _google_drive.google_list_files()
+
+        query = service.files.return_value.list.call_args.kwargs["q"]
+        self.assertEqual(
+            query,
+            "'drive-folder' in parents and name contains 'db_backup_'",
+        )
+
+    @patch("django_postgres_backup_restore.management.commands.list_backups.list_backup_files")
+    def test_list_backups_passes_date_range_to_storage(self, list_files):
+        list_files.return_value = []
+        command = ListBackupsCommand()
+
+        command.handle(start_date="20260501", end_date="20260531")
+
+        list_files.assert_called_once_with(
+            start_date=date(2026, 5, 1),
+            end_date=date(2026, 5, 31),
+        )
+
+    @override_settings(
+        BACKUP_STORAGE_BACKEND="google_cloud_storage",
+        GOOGLE_CLOUD_STORAGE_BUCKET="db-backups",
+        GOOGLE_CLOUD_STORAGE_PREFIX="Backups",
+    )
+    @patch("django_postgres_backup_restore.management.commands._storage._bucket")
     def test_deletes_matching_gcs_backup_names(self, get_bucket):
         match = Mock()
         match.name = "Backups/db_backup_20240101000000.pgsql"
@@ -152,6 +200,7 @@ class BackupStorageTests(SimpleTestCase):
 
         BackupCommand()._cleanup_old_remote_backups(datetime(2026, 1, 1))
 
+        list_backups.assert_called_once_with()
         delete_backups.assert_called_once_with("db_backup_20240115000000.pgsql")
 
     @override_settings(

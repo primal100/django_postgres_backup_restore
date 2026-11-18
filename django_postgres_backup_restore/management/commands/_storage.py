@@ -1,3 +1,4 @@
+from datetime import timedelta
 import logging
 from pathlib import Path, PurePosixPath
 import tempfile
@@ -50,7 +51,15 @@ def _object_name(filename):
     return f"{prefix}/{filename}" if prefix else filename
 
 
-def list_backup_files():
+def list_backup_files(start_date=None, end_date=None):
+    """List backups, optionally restricting GCS results to inclusive calendar dates.
+
+    Dates should be datetime.date instances. Google Drive only supports a
+    name-prefix query, so its results are filtered by date by the caller.
+    """
+    if start_date is not None and end_date is not None and start_date > end_date:
+        raise ValueError("start_date must be on or before end_date")
+
     if backend() == "google_drive":
         return [
             {
@@ -66,6 +75,21 @@ def list_backup_files():
     prefix = _prefix()
     if prefix:
         prefix += "/"
+    list_options = {"prefix": prefix}
+    if start_date is not None or end_date is not None:
+        # Backup timestamps sort lexicographically in object names.
+        # Cloud Storage offsets are end-exclusive, so advance the requested
+        # inclusive end date by one day.
+        list_options["start_offset"] = (
+            f"{prefix}db_backup_{start_date:%Y%m%d}" if start_date else f"{prefix}db_backup_"
+        )
+        if end_date is not None:
+            try:
+                end_exclusive = end_date + timedelta(days=1)
+            except OverflowError:
+                end_exclusive = None
+            if end_exclusive is not None:
+                list_options["end_offset"] = f"{prefix}db_backup_{end_exclusive:%Y%m%d}"
     return [
         {
             "id": blob.name,
@@ -74,7 +98,7 @@ def list_backup_files():
             "size": blob.size or 0,
             "created": blob.time_created,
         }
-        for blob in bucket.list_blobs(prefix=prefix)
+        for blob in bucket.list_blobs(**list_options)
         if blob.name and not blob.name.endswith("/")
     ]
 
