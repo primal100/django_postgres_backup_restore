@@ -8,29 +8,37 @@ The commands are `backup`, `list_backups`, `delete_backups`, and `restore`.
 
 ## Install
 
-Install the published distribution with Drive support:
+The package is hosted in the private Artifact Registry virtual repository
+**python-virtual**. Use an account with Artifact Registry Reader access and
+authenticate with Application Default Credentials before installing:
 
-```powershell
-python -m pip install django-postgres-backup-restore
-```
+~~~powershell
+gcloud auth application-default login
+python -m pip install "keyrings.google-artifactregistry-auth>=1.1"
+python -m pip install --index-url "https://europe-west1-python.pkg.dev/<PROJECT_ID>/python-virtual/simple/" django-postgres-backup-restore
+~~~
 
-For Google Cloud Storage, install the GCS extra:
+For Google Cloud Storage, install the GCS extra from the same repository:
 
-```powershell
-python -m pip install "django-postgres-backup-restore[gcs]"
-```
+~~~powershell
+python -m pip install --index-url "https://europe-west1-python.pkg.dev/<PROJECT_ID>/python-virtual/simple/" "django-postgres-backup-restore[gcs]"
+~~~
 
-Add the app to `INSTALLED_APPS`:
+On a service or build agent, use a service account through
+**GOOGLE_APPLICATION_CREDENTIALS** instead of running the interactive gcloud
+login command. Do not put credentials in the repository.
 
-```python
+Add the app to **INSTALLED_APPS**:
+
+~~~python
 INSTALLED_APPS = [
     # ...
     "django_postgres_backup_restore",
 ]
-```
+~~~
 
-The `pg_dump` executable from a PostgreSQL client installation must be on the
-server's `PATH`.
+The pg_dump executable from a PostgreSQL client installation must be on the
+server's PATH.
 
 ## Settings
 
@@ -152,17 +160,29 @@ python -m pytest
 The unit tests mock Google APIs and do not require cloud credentials or a live
 bucket.
 
-## Publish to PyPI
+## Publish to Artifact Registry
 
-Set up the `[pypi]` repository entry in your home-directory `.pypirc` file, then
-run:
+Maintainers need the Google Cloud CLI, Artifact Registry Writer access to the
+**private-python** repository, and Application Default Credentials. On a
+workstation, authenticate with:
 
-```powershell
-python -m pip install -e ".[gcs,publish]"
-.\publish.ps1
-```
+~~~powershell
+gcloud auth application-default login
+~~~
 
-The script activates the project `.venv` (creating it if needed), upgrades
-`pip`, `setuptools`, `wheel`, `build`, and `twine`, then builds and validates the
-source and wheel distributions before uploading with Twine's normal
-configuration. It does not read or print the PyPI token itself.
+For service account credentials, set **GOOGLE_APPLICATION_CREDENTIALS** to the
+credential file path in the publishing environment.
+
+Run the publishing script from PowerShell. It creates and activates **.venv**
+when needed, installs the build, Twine, and Artifact Registry keyring tools,
+checks the keyring backend and both built artifacts, then uploads to the
+**private-python** repository:
+
+~~~powershell
+.\publish.ps1 -ProjectId "<PROJECT_ID>"
+~~~
+
+You can omit **-ProjectId** when **GCP_PROJECT_ID** is set. Otherwise the script
+tries to resolve project number **910889088117** with gcloud and stops with an
+error if it cannot determine the project ID. The script does not use .pypirc
+or store credentials in this repository.
