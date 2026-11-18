@@ -5,12 +5,8 @@ BASE_DIR = Path(__file__).resolve().parent
 INSTALLED_APPS = ["django_postgres_backup_restore"]
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": "test_db",
-        "USER": "test_user",
-        "PASSWORD": "test_password",
-        "HOST": "db.example.test",
-        "PORT": "5432",
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": ":memory:",
     }
 }
 BACKUP_STORAGE_BACKEND = "google_drive"

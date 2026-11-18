@@ -20,13 +20,17 @@ def google_authenticate():
     return build("drive", "v3", credentials=scoped_credentials)
 
 
-def google_list_files():
+def google_list_files(name_prefix="db_backup_"):
     service = google_authenticate()
     files = []
     page_token = None
+    escaped_name_prefix = name_prefix.replace("\\", "\\\\").replace("'", "\'")
     while True:
         result = service.files().list(
-            q=f"'{settings.GOOGLE_BACKUPS_DIR}' in parents",
+            q=(
+                f"'{settings.GOOGLE_BACKUPS_DIR}' in parents and "
+                f"name contains '{escaped_name_prefix}'"
+            ),
             pageSize=1000,
             pageToken=page_token,
             fields="nextPageToken, files(id, name, size, createdTime)",

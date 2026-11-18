@@ -31,7 +31,7 @@ class Command(BaseCommand):
             raise CommandError("The start date must be on or before the end date.")
 
         matches = []
-        for item in list_backup_files():
+        for item in list_backup_files(start_date=start_date, end_date=end_date):
             filename = PurePosixPath(item["name"]).name
             match = BACKUP_NAME_RE.fullmatch(filename)
             if not match:
