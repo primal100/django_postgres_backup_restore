@@ -9,6 +9,32 @@ from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 
 logger = logging.getLogger("backup_restore")
 
+import os
+import google.auth
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+
+DRIVE_SCOPES = ["https://www.googleapis.com/auth/drive"]
+
+
+def google_authenticate():
+    credentials_file = getattr(settings, "GOOGLE_CLIENT_SECRET_FILE", "")
+
+    if not credentials_file:
+        logger.debug("Authenticating to Google Drive using Application Default Credentials (ADC)")
+        credentials, _ = google.auth.default(scopes=DRIVE_SCOPES)
+    else:
+        if not os.path.isfile(credentials_file):
+            raise FileNotFoundError(
+                f"GOOGLE_CLIENT_SECRET_FILE not found at: {credentials_file}"
+            )
+        logger.debug("Authenticating to Google Drive using credentials file %s", credentials_file)
+        credentials = service_account.Credentials.from_service_account_file(
+            credentials_file,
+            scopes=DRIVE_SCOPES,
+        )
+
+    return build("drive", "v3", credentials=credentials)
 
 def google_authenticate():
     credentials_file = getattr(settings, "GOOGLE_CLIENT_SECRET_FILE", "")
