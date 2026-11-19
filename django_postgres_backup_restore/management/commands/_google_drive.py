@@ -1,18 +1,19 @@
 import io
 import logging
+import os
 
 from django.conf import settings
+import google.auth
+from google.auth import impersonated_credentials
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
+
+
 from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 
 
 logger = logging.getLogger("backup_restore")
 
-import os
-import google.auth
-from google.oauth2 import service_account
-from googleapiclient.discovery import build
 
 DRIVE_SCOPES = ["https://www.googleapis.com/auth/drive"]
 
@@ -22,7 +23,26 @@ def google_authenticate():
 
     if not credentials_file:
         logger.debug("Authenticating to Google Drive using Application Default Credentials (ADC)")
-        credentials, _ = google.auth.default(scopes=DRIVE_SCOPES)
+        source_credentials, _ = google.auth.default(
+            scopes=["https://www.googleapis.com/auth/cloud-platform"]
+        )
+        service_account_email = getattr(source_credentials, "service_account_email", None)
+        if not service_account_email or service_account_email == "default":
+            # Resolve actual email from metadata server if needed
+            import urllib.request
+            req = urllib.request.Request(
+                "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/email",
+                headers={"Metadata-Flavor": "Google"},
+            )
+            with urllib.request.urlopen(req, timeout=2) as resp:
+                service_account_email = resp.read().decode().strip()
+
+        credentials = impersonated_credentials.Credentials(
+            source_credentials=source_credentials,
+            target_principal=service_account_email,
+            target_scopes=DRIVE_SCOPES,
+            lifetime=3600,
+        )
     else:
         if not os.path.isfile(credentials_file):
             raise FileNotFoundError(
