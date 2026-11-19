@@ -15,13 +15,13 @@ authenticate with Application Default Credentials before installing:
 ~~~powershell
 gcloud auth application-default login
 python -m pip install "keyrings.google-artifactregistry-auth>=1.1"
-python -m pip install --index-url "https://europe-west1-python.pkg.dev/<PROJECT_ID>/python-virtual/simple/" django-postgres-backup-restore
+python -m pip install --index-url "https://us-central1-python.pkg.dev/<PROJECT_ID>/python-virtual/simple/" django-postgres-backup-restore
 ~~~
 
 For Google Cloud Storage, install the GCS extra from the same repository:
 
 ~~~powershell
-python -m pip install --index-url "https://europe-west1-python.pkg.dev/<PROJECT_ID>/python-virtual/simple/" "django-postgres-backup-restore[gcs]"
+python -m pip install --index-url "https://us-central1-python.pkg.dev/<PROJECT_ID>/python-virtual/simple/" "django-postgres-backup-restore[gcs]"
 ~~~
 
 On a service or build agent, use a service account through
@@ -74,12 +74,12 @@ BACKUP_ENCRYPTION_KEY=replace-with-the-generated-key
 
 ### Google Drive
 
-| Setting | Purpose |
-| --- | --- |
-| `GOOGLE_CLIENT_SECRET_FILE` | Service-account credentials JSON file. |
-| `GOOGLE_BACKUPS_DIR` | Drive folder ID where backup files are stored. |
+| Setting | Default | Purpose |
+| --- | --- | --- |
+| `GOOGLE_CLIENT_SECRET_FILE` | ADC default | Optional service-account credentials JSON file. If unset, Application Default Credentials (such as an attached Compute Engine service account) are used. |
+| `GOOGLE_BACKUPS_DIR` | required | Drive folder ID where backup files are stored. |
 
-The service account needs access to the selected Drive folder.
+The service account (either from `GOOGLE_CLIENT_SECRET_FILE` or the attached ADC service account) needs access to the selected Drive folder, and the Google Drive API must be enabled in the GCP project.
 
 ### Google Cloud Storage
 
