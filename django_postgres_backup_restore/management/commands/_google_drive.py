@@ -36,15 +36,6 @@ def google_authenticate():
 
     return build("drive", "v3", credentials=credentials)
 
-def google_authenticate():
-    credentials_file = getattr(settings, "GOOGLE_CLIENT_SECRET_FILE", "")
-    if not credentials_file:
-        raise ValueError("GOOGLE_CLIENT_SECRET_FILE is required for Google Drive backups")
-    logger.debug("Using Google Drive credentials file %s", credentials_file)
-    credentials = service_account.Credentials.from_service_account_file(credentials_file)
-    scoped_credentials = credentials.with_scopes(["https://www.googleapis.com/auth/drive"])
-    return build("drive", "v3", credentials=scoped_credentials)
-
 
 def google_list_files(name_prefix="db_backup_"):
     service = google_authenticate()
