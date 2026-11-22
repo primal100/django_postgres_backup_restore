@@ -74,7 +74,7 @@ try {
             $message += [Environment]::NewLine + "gcloud lookup output: " + $lookupDetails
         }
         throw $message
-    }h
+    }
     $repoUrl = "https://us-central1-python.pkg.dev/$projectId/private-python/"
 
     if (Test-Path -LiteralPath ".\dist") {
